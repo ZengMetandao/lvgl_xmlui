@@ -615,6 +615,44 @@ void test_label_max_width(void)
     TEST_ASSERT_EQUAL_SCREENSHOT("widgets/label_max_width.png");
 }
 
+void test_label_dots(void)
+{
+    lv_obj_clean(lv_screen_active());
+
+    lv_obj_t * cont = lv_obj_create(lv_screen_active());
+    lv_obj_set_size(cont, LV_PCT(100), LV_PCT(100));
+    lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
+
+    lv_obj_t * label1 = lv_label_create(cont);
+    lv_obj_t * label2 = lv_label_create(cont);
+    lv_obj_t * label3 = lv_label_create(cont);
+    lv_obj_t * label4 = lv_label_create(cont);
+
+    lv_obj_set_size(label1, 150, 30);
+    lv_obj_set_size(label2, 150, 30);
+    lv_obj_set_size(label3, 150, 30);
+    lv_obj_set_size(label4, 150, 30);
+
+    const char * temp_text = "Some other text";
+
+    lv_label_set_text(label1, long_text);
+    lv_label_set_text(label2, temp_text);
+
+    lv_label_set_text_fmt(label3, "%.*s", (int)strlen(long_text), long_text);
+    lv_label_set_text_fmt(label4, "%.*s", (int)strlen(temp_text), temp_text);
+
+    lv_label_set_long_mode(label1, LV_LABEL_LONG_MODE_DOTS);
+    lv_label_set_long_mode(label2, LV_LABEL_LONG_MODE_DOTS);
+    lv_label_set_long_mode(label3, LV_LABEL_LONG_MODE_DOTS);
+    lv_label_set_long_mode(label4, LV_LABEL_LONG_MODE_DOTS);
+
+    /* Setting the text with _fmt when long mode was dots would cause the incorrect text to be displayed */
+    lv_label_set_text(label2, long_text);
+    lv_label_set_text_fmt(label4, "%.*s", (int)strlen(long_text), long_text);
+
+    TEST_ASSERT_EQUAL_SCREENSHOT("widgets/label_dots.png");
+}
+
 void test_label_with_recolor_cmd(void)
 {
     lv_obj_clean(lv_screen_active());
@@ -750,6 +788,66 @@ void test_label_wrap_mode_clip(void)
     char buf[128];
     lv_snprintf(buf, sizeof(buf), "widgets/label_wrap_clip.png");
     TEST_ASSERT_EQUAL_SCREENSHOT(buf);
+}
+void test_label_translation_tag(void)
+{
+    static const char * tags[] = {"tiger", NULL};
+    static const char * languages[]    = {"en", "de", "es", NULL};
+    static const char * translations[] = { "The Tiger", "Der Tiger", "El Tigre" };
+    lv_translation_add_static(languages, tags, translations);
+    label = lv_label_create(NULL);
+    lv_label_set_translation_tag(label, "tiger");
+
+    lv_translation_set_language("en");
+    TEST_ASSERT_EQUAL_STRING(lv_label_get_text(label), "The Tiger");
+
+    lv_translation_set_language("de");
+    TEST_ASSERT_EQUAL_STRING(lv_label_get_text(label), "Der Tiger");
+
+    lv_translation_set_language("es");
+    TEST_ASSERT_EQUAL_STRING(lv_label_get_text(label), "El Tigre");
+
+    /* Unknown language translates to the tag */
+    lv_translation_set_language("fr");
+    TEST_ASSERT_EQUAL_STRING(lv_label_get_text(label), "tiger");
+}
+
+void test_label_setting_text_disables_translation(void)
+{
+    static const char * tags[] = {"tiger", NULL};
+    static const char * languages[]    = {"en", "de", "es", NULL};
+    static const char * translations[] = { "The Tiger", "Der Tiger", "El Tigre" };
+    lv_translation_add_static(languages, tags, translations);
+    label = lv_label_create(NULL);
+    lv_label_set_translation_tag(label, "tiger");
+
+    lv_translation_set_language("en");
+    TEST_ASSERT_EQUAL_STRING(lv_label_get_text(label), "The Tiger");
+
+    lv_translation_set_language("de");
+    TEST_ASSERT_EQUAL_STRING(lv_label_get_text(label), "Der Tiger");
+
+    /* Using set text should unbind the translation tag*/
+    lv_label_set_text(label, "Hello world");
+    lv_translation_set_language("de");
+    TEST_ASSERT_EQUAL_STRING(lv_label_get_text(label), "Hello world");
+
+    lv_label_set_translation_tag(label, "tiger");
+    TEST_ASSERT_EQUAL_STRING(lv_label_get_text(label), "Der Tiger");
+
+    /* Using set text static should unbind the translation tag*/
+    lv_label_set_text_static(label, "Hello world");
+    lv_translation_set_language("en");
+    TEST_ASSERT_EQUAL_STRING(lv_label_get_text(label), "Hello world");
+    lv_label_set_translation_tag(label, "tiger");
+    TEST_ASSERT_EQUAL_STRING(lv_label_get_text(label), "The Tiger");
+
+    /* Using set text fmt should unbind the translation tag*/
+    lv_label_set_text_fmt(label, "Hello world %d", 1);
+    lv_translation_set_language("de");
+    TEST_ASSERT_EQUAL_STRING(lv_label_get_text(label), "Hello world 1");
+    lv_label_set_translation_tag(label, "tiger");
+    TEST_ASSERT_EQUAL_STRING(lv_label_get_text(label), "Der Tiger");
 }
 
 #endif

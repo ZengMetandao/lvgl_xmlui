@@ -158,6 +158,12 @@ void lv_sdl_window_set_resizeable(lv_display_t * disp, bool value)
     SDL_SetWindowResizable(dsc->window, value);
 }
 
+void lv_sdl_window_set_size(lv_display_t * disp, int32_t hor_res, int32_t ver_res)
+{
+    lv_sdl_window_t * dsc = lv_display_get_driver_data(disp);
+    SDL_SetWindowSize(dsc->window, hor_res, ver_res);
+}
+
 void lv_sdl_window_set_zoom(lv_display_t * disp, float zoom)
 {
     lv_sdl_window_t * dsc = lv_display_get_driver_data(disp);
@@ -206,6 +212,20 @@ void * lv_sdl_window_get_renderer(lv_display_t * disp)
 {
     lv_sdl_window_t * dsc = lv_display_get_driver_data(disp);
     return dsc->renderer;
+}
+
+struct SDL_Window * lv_sdl_window_get_window(lv_display_t * disp)
+{
+    if(!disp) {
+        LV_LOG_ERROR("invalid display pointer");
+        return NULL;
+    }
+    lv_sdl_window_t * dsc = lv_display_get_driver_data(disp);
+    if(!dsc) {
+        LV_LOG_ERROR("invalid driver data");
+        return NULL;
+    }
+    return dsc->window;
 }
 
 void lv_sdl_quit(void)
