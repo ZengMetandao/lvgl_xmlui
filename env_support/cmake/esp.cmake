@@ -82,3 +82,6 @@ if(CONFIG_FREERTOS_SMP)
 else()
     target_include_directories(${COMPONENT_LIB} PRIVATE "${IDF_PATH}/components/freertos/FreeRTOS-Kernel/include/freertos/")
 endif()
+
+# Suppress format warnings being treated as errors for the whole component
+target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-error=format)
