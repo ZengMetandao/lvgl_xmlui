@@ -35,6 +35,7 @@ static lv_result_t decoder_open(lv_image_decoder_t * decoder, lv_image_decoder_d
 static void decoder_close(lv_image_decoder_t * dec, lv_image_decoder_dsc_t * dsc);
 static void convert_color_depth(uint8_t * img_p, uint32_t px_cnt);
 static lv_draw_buf_t * decode_png_data(const void * png_data, size_t png_data_size);
+static bool load_png_file(const char * filename, uint8_t ** data, size_t * size);
 /**********************
  *  STATIC VARIABLES
  **********************/
@@ -146,13 +147,10 @@ static lv_result_t decoder_open(lv_image_decoder_t * decoder, lv_image_decoder_d
     if(dsc->src_type == LV_IMAGE_SRC_FILE) {
         const char * fn = dsc->src;
 
-        /*Load the file*/
-        unsigned error = lodepng_load_file((void *)&png_data, &png_data_size, fn);
-        if(error) {
-            if(png_data != NULL) {
-                lv_free((void *)png_data);
-            }
-            LV_LOG_WARN("error %u: %s\n", error, lodepng_error_text(error));
+        /*Use LVGL's file-system abstraction so virtual drive paths such as
+         * D:/storage/... resolve through LV_FS_POSIX_PATH.*/
+        if(!load_png_file(fn, (uint8_t **)&png_data, &png_data_size)) {
+            LV_LOG_WARN("Failed to load PNG through LVGL file system: %s", fn);
             LV_PROFILER_DECODER_END_TAG("lv_lodepng_decoder_open");
             return LV_RESULT_INVALID;
         }
@@ -219,6 +217,31 @@ static lv_result_t decoder_open(lv_image_decoder_t * decoder, lv_image_decoder_d
 
     LV_PROFILER_DECODER_END_TAG("lv_lodepng_decoder_open");
     return LV_RESULT_OK;    /*If not returned earlier then it failed*/
+}
+
+static bool load_png_file(const char * filename, uint8_t ** data, size_t * size)
+{
+    lv_fs_file_t file;
+    uint32_t file_size = 0;
+    uint32_t bytes_read = 0;
+    *data = NULL;
+    *size = 0;
+    if(lv_fs_open(&file, filename, LV_FS_MODE_RD) != LV_FS_RES_OK) return false;
+    bool success = lv_fs_seek(&file, 0, LV_FS_SEEK_END) == LV_FS_RES_OK &&
+                   lv_fs_tell(&file, &file_size) == LV_FS_RES_OK && file_size > 0 &&
+                   lv_fs_seek(&file, 0, LV_FS_SEEK_SET) == LV_FS_RES_OK;
+    uint8_t * buffer = success ? lv_malloc(file_size) : NULL;
+    success = buffer != NULL &&
+              lv_fs_read(&file, buffer, file_size, &bytes_read) == LV_FS_RES_OK &&
+              bytes_read == file_size;
+    lv_fs_close(&file);
+    if(!success) {
+        lv_free(buffer);
+        return false;
+    }
+    *data = buffer;
+    *size = file_size;
+    return true;
 }
 
 /**
